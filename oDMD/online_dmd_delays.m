@@ -8,7 +8,8 @@ clear all; close all; clc;
 
 sequence = 2;
 
-load ("Seq"+int2str(sequence)+".mat");
+load ("/Users/NickT/Documents/TUHH-MATLAB-GitHub-Repo/TUHH-GB-Repo" + ...
+    "/mat-files/Seq"+int2str(sequence)+".mat");
 
 % Downsampling
 
