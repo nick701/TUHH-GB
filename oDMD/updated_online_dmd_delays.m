@@ -1,7 +1,6 @@
 clear all; close all; clc;
 %%
 
-
 % Seq1 -> 1.55 - 2.00 min; penetration 0.9 - 1.0 m (approx)
 % Seq2 -> 4.40 - 4.45 min; penetration 1.75 - 2.0 m (approx)
 % Seq3 -> 10.55 - 11.0 min; penetration 3.50 - 3.60 (approx)
@@ -10,6 +9,19 @@ sequence = 2;
 
 load ("/Users/NickT/Documents/TUHH-MATLAB-GitHub-Repo/TUHH-GB-Repo" + ...
     "/mat-files/Seq"+int2str(sequence)+".mat");
+
+% Parameters to test with
+
+num_geo = 200;
+
+s = 10;
+
+lambda = 1e-1;
+
+t_prediction_horizon = 0.5;
+
+plot_odmd = 1;
+
 
 % Downsampling
 
@@ -25,30 +37,32 @@ dt = time(2)-time(1);
 
 f = [G1'; G2'; G3'; G4'; G5'];
 
-num_geo = 200;
+% num_geo = 200; % Parameter to test
 
 
+ls =  ceil(length(f)/2);   
 
-ls =  ceil(length(f)/2);    
-s = 10;
+% s = 10; % Parameter to test
+
 for i = 1:s
     f_aug([i s+i 2*s+i 3*s+i 4*s+i],:) = [f(1,i:ls+i-1) ;f(2,i:ls+i-1) ;f(3,i:ls+i-1) ;f(4,i:ls+i-1) ;f(5,i:ls+i-1)];
     %f_aug = f;
 end
+
 % f_aug = f;
 x = f_aug(:,1:end-1); y = f_aug(:,2:end);
 [n,m] = size(x);
 
 %regularization
-lambda = 1e-1;
+% lambda = 1e-1; % Parameter to test
 
 odmd = OnlineDMD(n,1);
 odmd.initialize(x(:,1:num_geo),y(:,1:num_geo),lambda);
 
 % online DMD
-t_prediction_horizon = 0.5;
+% t_prediction_horizon = 0.5;
 figure;
-plot_odmd = 1;
+% plot_odmd = 1; % Parameter to test
 
 for k = num_geo:m
     t_prediction = time(k):dt:time(k)+t_prediction_horizon;

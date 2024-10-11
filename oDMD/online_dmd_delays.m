@@ -25,12 +25,11 @@ dt = time(2)-time(1);
 
 f = [G1'; G2'; G3'; G4'; G5'];
 
-num_geo = 100;
-
+num_geo = 100; % Parameter to test
 
 
 ls =  ceil(length(f)/2);    
-s = 1;
+s = 1; % Parameter to test
 for i = 1:s
     f_aug([i s+i 2*s+i 3*s+i 4*s+i],:) = [f(1,i:ls+i-1) ;f(2,i:ls+i-1) ;f(3,i:ls+i-1) ;f(4,i:ls+i-1) ;f(5,i:ls+i-1)];
     %f_aug = f;
@@ -40,7 +39,7 @@ x = f_aug(:,1:end-1); y = f_aug(:,2:end);
 [n,m] = size(x);
 
 %regularization
-lambda = 1e-0;
+lambda = 1e-0; % Parameter to test
 
 odmd = OnlineDMD(n,0.9);
 odmd.initialize(x(:,1:num_geo),y(:,1:num_geo),lambda);
