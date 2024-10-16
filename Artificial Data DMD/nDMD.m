@@ -1,7 +1,9 @@
 run('DataGenerator.m'); % Load 'x', 'y', 'time', etc. from DataGenerator.m
+% run('DataGenerator2.m'); % Load 'x', 'y', 'time', etc. from DataGenerator.m
+
 
 % Delay Coordinates
-num_delays = 10; 
+num_delays = 150; 
 
 
 function [X_delayed] = construct_delay_coordinates(x, num_delays)
