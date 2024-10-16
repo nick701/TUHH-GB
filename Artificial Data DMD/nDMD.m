@@ -1,7 +1,7 @@
 run('DataGenerator.m'); % Load 'x', 'y', 'time', etc. from DataGenerator.m
 
 % Delay Coordinates
-num_delays = 10; 
+num_delays = 99; 
 
 
 function [X_delayed] = construct_delay_coordinates(x, num_delays)
@@ -23,7 +23,7 @@ Y_delayed = construct_delay_coordinates(y, num_delays);
 
 A_tilde = U' * Y_delayed * V / S;
 
-% Compute eigenvalues and DMD modes
+% Eigenvalues and DMD modes
 [W, D] = eig(A_tilde);
 Phi = Y_delayed * V / S * W; % DMD modes
 
@@ -36,8 +36,9 @@ disp(eigenvalues);
 
 % Eigenvalue Plot
 figure;
-plot(real(eigenvalues), imag(eigenvalues), 'o');
-xlabel('Real Part');
-ylabel('Imaginary Part');
+plot(real(eigenvalues), imag(eigenvalues), 'o', ...
+    'MarkerSize', 6, 'MarkerEdgeColor', 'blue', 'MarkerFaceColor', 'blue');
+xlabel('Re');
+ylabel('Im');
 title(sprintf('Eigenvalues for %d Delays', num_delays));
 grid on;
