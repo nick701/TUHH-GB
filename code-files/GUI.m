@@ -62,8 +62,7 @@ function DMD_GUI
         online_DMD = onlineDMDCheck.Value;
         horizon = horizonEdit.Value;
 
-        % Run the DMD script with these parameters, including the file path
-        % Assuming your DMD.m uses function structure with these inputs:
-        DMD(filePath, n, r, window, nstep, s, plot_geophones, plot_NRMSE, standard_DMD, aug_DMD, prediction_error, print_NRMSE, print_prediction_error, online_DMD, horizon);
+        % Run DMD_wrapper with the collected parameters
+        DMD_wrapper(filePath, n, r, window, nstep, s, plot_geophones, plot_NRMSE, standard_DMD, aug_DMD, prediction_error, print_NRMSE, print_prediction_error, online_DMD, horizon);
     end
 end

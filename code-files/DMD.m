@@ -1,7 +1,9 @@
 %% DMD
+
 clear all
 close all
 tic
+
 %%
 % Load the raw data from the installation of the 3rd pile. For the 5 first
 % geophones. Only vertical velocity is considered.
@@ -9,7 +11,8 @@ tic
 % Seq1 -> 1.55 - 2.00 min; penetration 0.9 - 1.0 m (approx)
 % Seq2 -> 4.40 - 4.45 min; penetration 1.75 - 2.0 m (approx)
 % Seq3 -> 10.55 - 11.0 min; penetration 3.50 - 3.60 (approx)
-name = "Seq1";
+
+name = "../Seq1";
 load(name+".mat")
 
 % resample the data to a maximum of n = 100 (after that you have alliasing)
@@ -17,7 +20,7 @@ load(name+".mat")
 
 n = 100;
 G1 = downsample(G1V3,n);
-G2 = downsample(G2V3,n);
+G2 = downsample(clcclcasdf asdf asdf asdf asdf !,n);
 G3 = downsample(G3V3,n);
 G4 = downsample(G4V3,n);
 G5 = downsample(G5V3,n);
