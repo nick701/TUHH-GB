@@ -1,5 +1,5 @@
 % Load data
-load('Seq1.mat'); % Ensure data includes G1V3, G2V3, ..., Time
+load('mat-files/Seq1.mat');
 
 % Combine signals into a matrix
 X = [G1V3; G2V3; G3V3; G4V3; G5V3];
