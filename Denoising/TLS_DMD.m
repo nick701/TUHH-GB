@@ -1,77 +1,97 @@
-% Load data
-load('mat-files/Seq1.mat');  % Load the dataset
+%% TLS-DMD
+clear all;
+close all;
+clc;
+tic;
 
-% Combine signals into a matrix
-% Each signal is a row in the matrix
-X_original = [G1V3'; G2V3'; G3V3'; G4V3'; G5V3'];  % Transpose to make time snapshots columns
+name = 'mat-files/Seq1';
+load(name + ".mat");
 
-% Extract snapshots X and X' from the dataset
-X = X_original(:, 1:end-1);   % Past states
-X_prime = X_original(:, 2:end); % Future states
+%% Parameters
+n = 100; 
+G1 = downsample(G1V3, n);
+G2 = downsample(G2V3, n);
+G3 = downsample(G3V3, n);
+G4 = downsample(G4V3, n);
+G5 = downsample(G5V3, n);
+time = downsample(Time, n);
 
-% Denoising function using Singular Value Thresholding (SVT)
-function X_denoised = denoise(X)
-    [U, S, V] = svd(X, 'econ');
-    % Thresholding: keep singular values above a certain threshold
-    threshold = 0.1 * max(diag(S)); % Example: 10% of maximum singular value
-    S_denoised = diag(max(diag(S) - threshold, 0)); % Apply soft-thresholding
-    X_denoised = U * S_denoised * V';
+dt = time(2) - time(1); 
+
+f_all = [G1'; G2'; G3'; G4'; G5']';
+
+num_geo = 5;    % Number of geophones
+r = 5;          % Rank truncation
+window = 500;   % Window size
+step = window;  % Sliding step for window
+denoise = true; % Enable denoising
+extraTime = 0;  % Time for prediction
+
+%% TLS-DMD Analysis
+[rows, cols] = size(f_all);
+t = 0:dt:(window-1)*dt+extraTime;
+errors = zeros(num_geo, cols-window);
+
+for j = 1:step:(cols-window)
+    X = f_all(j:j+window-1, :)';
+    X1 = X(:, 1:end-1);
+    X2 = X(:, 2:end);
+
+    % SVD for Total Least Squares
+    [U, S, V] = svd([X1; X2], 'econ');
+    rTLS = min(r, size(S, 2));
+    U_r = U(:, 1:rTLS);
+    S_r = S(1:rTLS, 1:rTLS);
+    V_r = V(:, 1:rTLS);
+
+    X1_denoised = U_r(1:size(X1, 1), :) * S_r * V_r';
+    X2_denoised = U_r(size(X1, 1)+1:end, :) * S_r * V_r';
+
+    Atilde = X1_denoised \ X2_denoised;
+    [W, D] = eig(Atilde);
+    Phi = X2_denoised * V_r / S_r * W;
+   
+    lambda = diag(D);
+    omega = log(lambda) / dt;
+
+   
+    b = Phi \ X1_denoised(:, 1);
+
+    % Reconstruct signals
+    t_dmd = 0:dt:(size(X1, 2)-1)*dt;
+    f_dmd = real(Phi * (b .* exp(omega * t_dmd)));
+
+    % Denoising application
+    if denoise
+        f_all(j:j+size(f_dmd, 2)-1, :) = f_dmd';
+    end
+
+    errors(:, j:j+size(f_dmd, 2)-1) = abs(f_dmd - X1_denoised);
+
+    % Visualization
+    if j == 1
+        figure;
+        for i = 1:num_geo
+            subplot(ceil(num_geo/2), 2, i);
+            plot(t, f_all(j:j+window-1, i), 'k', 'DisplayName', 'Raw');
+            hold on;
+            plot(t, f_dmd(i, :), 'r--', 'DisplayName', 'DMD');
+            legend('show');
+            title(['Geophone ', num2str(i)]);
+            xlabel('Time [s]');
+            ylabel('Amplitude');
+        end
+    end
 end
 
-% Apply denoising to X and X_prime
-X_denoised = denoise(X);
-X_prime_denoised = denoise(X_prime);
-
-% Concatenate denoised data for TLS
-Z = [X_denoised; X_prime_denoised];
-
-% Perform Singular Value Decomposition
-[U, S, V] = svd(Z, 'econ');
-
-% Partition U, S, V for TLS
-n = size(X, 1); % Number of rows in X
-m = size(X_prime, 1); % Number of rows in X_prime
-r = rank(S); % Rank of the S matrix
-
-% Ensure reduced partitions are extracted correctly
-U_r = U(1:n, 1:r);    % Top part of U with r columns
-S_r = S(1:r, 1:r);    % Top left part of S
-V_r = V(:, 1:r);      % First r columns of V
-
-% Compute TLS-DMD operator
-A_TLS = X_prime_denoised * V_r * pinv(S_r) * U_r';
-
-% Eigen decomposition of A_TLS
-[W, D] = eig(A_TLS);
-
-% Reconstruct signal
-timesteps = size(X, 2); % Number of timesteps
-initial_state = X_denoised(:, 1); % Initial condition
-X_reconstructed = zeros(size(X));
-for t = 1:timesteps
-    X_reconstructed(:, t) = W * (D^(t-1)) * pinv(W) * initial_state;
-end
-
-% Plot the original and reconstructed signals
+%% Plot Errors
 figure;
-subplot(2, 1, 1);
-plot(1:timesteps, X(1, :), 'r', 'LineWidth', 1.5); hold on;
-plot(1:timesteps, X_reconstructed(1, :), 'b--', 'LineWidth', 1.5);
-title('Original vs Reconstructed Signal - Component 1');
-xlabel('Time Step');
-ylabel('Amplitude');
-legend('Original', 'Reconstructed');
+for i = 1:num_geo
+    subplot(ceil(num_geo/2), 2, i);
+    plot(errors(i, :), 'b');
+    title(['Error for Geophone ', num2str(i)]);
+    xlabel('Time');
+    ylabel('Error');
+end
 
-subplot(2, 1, 2);
-plot(1:timesteps, X(2, :), 'r', 'LineWidth', 1.5); hold on;
-plot(1:timesteps, X_reconstructed(2, :), 'b--', 'LineWidth', 1.5);
-title('Original vs Reconstructed Signal - Component 2');
-xlabel('Time Step');
-ylabel('Amplitude');
-legend('Original', 'Reconstructed');
-grid on;
-
-% Compute and display Signal-to-Noise Ratio (SNR)
-reconstruction_error = norm(X - X_reconstructed, 'fro');
-snr_value = 20 * log10(norm(X, 'fro') / reconstruction_error);
-disp(['Reconstruction SNR: ', num2str(snr_value), ' dB']);
+toc;
