@@ -11,7 +11,7 @@ load(name + ".mat")
 n = 100; % Resampling rate
 num_geo = 5; % Number of geophones
 r = 5; % Rank truncation
-window = 1000; % DMD window size
+window = 500; % DMD window size
 nstep = 1; % Step size for window
 initstep = 1; % Initial analysis step
 dt = 0.01; % Time step
@@ -28,10 +28,9 @@ f_all = [G1'; G2'; G3'; G4'; G5']';
 X1 = zeros(num_geo, window - 1);
 X2 = zeros(num_geo, window - 1);
 
-lambda = 0.1;
+lambda = 0.1; 
 
 %% DMD Analysis
-figure;
 for j = initstep:nstep*window:length(f_all) - window
     f_window = f_all(j:j+window-1, :);
     
@@ -56,13 +55,14 @@ for j = initstep:nstep*window:length(f_all) - window
     
     b = Phi \ X1(:, 1);
     
-    time_dmd = (0:window-1) * dt; % Match time_dmd to the current window
+    time_dmd = (0:size(X1, 2) - 1) * dt;
     f_dmd = real(Phi * (b .* exp(omega * time_dmd)));
     
     f_denoised = max(0, abs(f_dmd) - lambda) .* sign(f_dmd);
     
-    %% Visualization
     
+    %% Visualization
+    figure(1)
     subplot(2, 1, 1)
     plot(time(j:j+window-1), f_window(:, 1), 'DisplayName', 'Original')
     hold on
@@ -71,14 +71,11 @@ for j = initstep:nstep*window:length(f_all) - window
     title('Geophone 1 Signal Reconstruction')
     
     subplot(2, 1, 2)
-    plot(time(j:j+window-1), real(f_window(:, 1)) - real(f_denoised(1, :))', 'r', 'DisplayName', 'Error')
+    plot(time(j:j+window-1), f_window(:, 1) - f_denoised(1, :), 'r', 'DisplayName', 'Error')
     legend
     title('Denoising Error')
-
+    
     drawnow
-    pause(1)
-    clf
 end
 
 toc
- 
