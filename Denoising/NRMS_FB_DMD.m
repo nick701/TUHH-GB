@@ -1,4 +1,4 @@
-%% Forward/Backward DMD with Denoising and NRMSE
+%% Forward/Backward DMD with Denoising and Continuous NRMSE
 clear all
 close all
 tic
@@ -56,23 +56,23 @@ for j = initstep:nstep*window:length(f_all) - window
     
     b = Phi \ X1(:, 1);
     
-    time_dmd = (0:window-1) * dt; % Match time_dmd to the current window
+    time_dmd = (0:window-1) * dt;
     f_dmd = real(Phi * (b .* exp(omega * time_dmd)));
     
     f_denoised = max(0, abs(f_dmd) - lambda) .* sign(f_dmd);
     
     %% NRMSE Calculation
-    ERR = zeros(num_geo, 1);
+    ERR = zeros(num_geo, window);
     for g = 1:num_geo
         F_DMD = real(f_dmd(g, :)');
         F_AUG = f_window(:, g);
         % Compute RMSE
-        rmse_val = sqrt(mean((F_DMD - F_AUG).^2));
+        rmse_val = sqrt(mean((F_DMD - F_AUG).^2, 2));
         % Normalize RMSE
-        ERR(g) = rmse_val / (max(abs(F_AUG)) - min(abs(F_AUG)));
+        ERR(g, :) = rmse_val ./ (max(abs(F_AUG)) - min(abs(F_AUG)));
     end
-    nrmse = mean(ERR); % Aggregate NRMSE for all geophones
-
+    nrmse_over_time = mean(ERR, 1); % Average NRMSE for all geophones over time
+    
     %% Visualization
     
     subplot(2, 1, 1)
@@ -83,10 +83,12 @@ for j = initstep:nstep*window:length(f_all) - window
     title('Geophone 1 Signal Reconstruction')
     
     subplot(2, 1, 2)
-    plot(j, nrmse, 'ro', 'DisplayName', 'NRMSE');
+    plot(time(j:j+window-1), nrmse_over_time, 'r', 'DisplayName', 'NRMSE')
     legend
-    title('Normalized RMSE')
-
+    title('NRMS Error')
+    xlabel('Time')
+    ylabel('NRMSE')
+    
     drawnow
     pause(1)
     clf
