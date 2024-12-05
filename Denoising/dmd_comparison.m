@@ -30,7 +30,9 @@ f_dmd_results = zeros(size(f_all));
 f_fwd_bwd_results = zeros(size(f_all));
 
 %% Regular DMD Analysis
-for j = initstep:nstep*window:length(f_all) - window
+%for j = initstep:nstep*window:length(f_all) - window
+
+for j = initstep:nstep*window:window
     f_window = f_all(j:j+window-1, :);
     
     % Regular DMD
@@ -51,10 +53,11 @@ for j = initstep:nstep*window:length(f_all) - window
     
     % Store results for comparison
     f_dmd_results(j:j+window-1, :) = f_dmd.';
-end
+%end
 
 %% Forward/Backward DMD Analysis
-for j = initstep:nstep*window:length(f_all) - window
+
+%for j = initstep:nstep*window:length(f_all) - window
     f_window = f_all(j:j+window-1, :);
     
     % Forward/Backward DMD with denoising
@@ -74,7 +77,7 @@ for j = initstep:nstep*window:length(f_all) - window
     f_dmd = real(Phi * (b .* exp(omega * time_dmd)));
     
     % Apply denoising
-    lambda_denoise = 0.1; % Denoising threshold
+    lambda_denoise = 0.0; % Denoising threshold
     f_denoised = max(0, abs(f_dmd) - lambda_denoise) .* sign(f_dmd);
     
     % Store results for comparison
@@ -83,11 +86,17 @@ end
 
 %% Plot Comparison
 figure;
-% Plot all geophones combined for each method
-plot(time, mean(f_all, 2), 'k', 'LineWidth', 1.5, 'DisplayName', 'Original');
+% % Plot all geophones combined for each method
+% plot(time, mean(f_all, 2), 'k', 'LineWidth', 1.5, 'DisplayName', 'Original');
+% hold on;
+% plot(time, mean(f_dmd_results, 2), 'b--', 'LineWidth', 1.5, 'DisplayName', 'Regular DMD');
+% plot(time, mean(f_fwd_bwd_results, 2), 'r-.', 'LineWidth', 1.5, 'DisplayName', 'Fwd/Back DMD');
+% title('Comparison of DMD Methods (All Geophones)');
+
+plot(time(1:window), f_all(1:window,2), 'k', 'LineWidth', 1.5, 'DisplayName', 'Original');
 hold on;
-plot(time, mean(f_dmd_results, 2), 'b--', 'LineWidth', 1.5, 'DisplayName', 'Regular DMD');
-plot(time, mean(f_fwd_bwd_results, 2), 'r-.', 'LineWidth', 1.5, 'DisplayName', 'Fwd/Back DMD');
+plot(time(1:window), f_dmd_results(1:window,2), 'b--', 'LineWidth', 1.5, 'DisplayName', 'Regular DMD');
+plot(time(1:window), f_fwd_bwd_results(1:window,2), 'r-.', 'LineWidth', 1.5, 'DisplayName', 'Fwd/Back DMD');
 title('Comparison of DMD Methods (All Geophones)');
 xlabel('Time [s]');
 ylabel('Amplitude');
