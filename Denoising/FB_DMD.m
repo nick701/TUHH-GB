@@ -1,14 +1,12 @@
-%% FB-DMD Implementation
+%% FB DMD 
 
 clear all
 close all
 tic
 
-% Load the raw data
 name = "mat-files/Seq1";
 load(name + ".mat")
 
-% Resample the data to avoid aliasing
 n = 100;
 G1 = downsample(G1V3, n);
 G2 = downsample(G2V3, n);
@@ -20,7 +18,6 @@ time = downsample(Time, n);
 % Calculate time delta
 dt = time(2) - time(1);
 
-% Arrange data in matrix
 f_all = [G1'; G2'; G3'; G4'; G5']';
 
 % Parameters
@@ -28,7 +25,6 @@ r = 5; % Truncation rank
 plot_live = 1; % Enable live plotting
 plot_error = 1; % Enable error plotting
 
-% FB-DMD Implementation
 window = 500; % Window length
 step = 100; % Step size for overlapping windows
 
