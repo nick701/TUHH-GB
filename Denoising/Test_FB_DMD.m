@@ -32,6 +32,10 @@ plot_error = 1; % Enable error plotting
 window = 500; % Window length
 step = 100; % Step size for overlapping windows
 
+% Initialize NRMSE storage
+nrmse_values = [];
+start_indices = [];
+
 for start_idx = 1:step:(size(f_all, 1) - window)
     % Extract data windows
     Y = f_all(start_idx:start_idx+window-1, :)';
@@ -64,31 +68,36 @@ for start_idx = 1:step:(size(f_all, 1) - window)
     
     % Live plotting
     if plot_live
+        figure(1);
+        clf;
+        hold on;
         for geo = 1:size(Y, 1)
-            subplot(3, 2, geo);
-            plot(time_recon, Y(geo, :), 'b', 'DisplayName', 'Original Signal');
-            hold on;
-            plot(time_recon, Y_recon(geo, :), 'r--', 'DisplayName', 'Reconstructed Signal');
-            title(['Geophone ', num2str(geo)]);
-            xlabel('Time [s]');
-            ylabel('Velocity [m/s]');
-            legend();
-            hold off;
+            plot(time_recon, Y(geo, :), 'DisplayName', ['Geophone ', num2str(geo), ' Original']);
+            plot(time_recon, Y_recon(geo, :), '--', 'DisplayName', ['Geophone ', num2str(geo), ' Reconstructed']);
         end
+        xline(window * dt, '--', {'Predicted', 'Signal'});
+        title('Geophones: Original vs. Reconstructed Signals');
+        xlabel('Time [s]');
+        ylabel('Velocity [m/s]');
+        legend('show');
+        hold off;
         drawnow;
     end
     
-    % Compute and plot error
-    if plot_error
-        NRMSE = sqrt(mean((Y(:) - Y_recon(:)).^2)) / (max(Y(:)) - min(Y(:)));
-        subplot(3, 2, 6);
-        plot(start_idx, NRMSE, 'ko', 'MarkerFaceColor', 'r');
-        hold on;
-        xlabel('Time Window Start');
-        ylabel('NRMSE');
-        title('Error Analysis');
-        drawnow;
-    end
+    % Compute and store NRMSE
+    NRMSE = sqrt(mean((Y(:) - Y_recon(:)).^2)) / (max(Y(:)) - min(Y(:)));
+    nrmse_values = [nrmse_values, NRMSE];
+    start_indices = [start_indices, start_idx];
+end
+
+% Plot NRMSE
+if plot_error
+    figure(2);
+    plot(start_indices, nrmse_values, '-r', 'LineWidth', 1.5);
+    title('NRMSE Over Time Windows');
+    xlabel('Window Start Index');
+    ylabel('NRMSE');
+    grid on;
 end
 
 toc

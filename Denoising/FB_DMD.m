@@ -1,21 +1,15 @@
-%% Forward/Backward DMD with Denoising
+%% FB-DMD Implementation
+
 clear all
 close all
 tic
 
-%% Load the dataset
+% Load the raw data
 name = "mat-files/Seq1";
 load(name + ".mat")
 
-% Parameters
-n = 100; % Resampling rate
-num_geo = 5; % Number of geophones
-r = 5; % Rank truncation
-window = 1000; % DMD window size
-nstep = 1; % Step size for window
-initstep = 1; % Initial analysis step
-dt = 0.01; % Time step
-
+% Resample the data to avoid aliasing
+n = 100;
 G1 = downsample(G1V3, n);
 G2 = downsample(G2V3, n);
 G3 = downsample(G3V3, n);
@@ -23,62 +17,78 @@ G4 = downsample(G4V3, n);
 G5 = downsample(G5V3, n);
 time = downsample(Time, n);
 
+% Calculate time delta
+dt = time(2) - time(1);
+
+% Arrange data in matrix
 f_all = [G1'; G2'; G3'; G4'; G5']';
 
-X1 = zeros(num_geo, window - 1);
-X2 = zeros(num_geo, window - 1);
+% Parameters
+r = 5; % Truncation rank
+plot_live = 1; % Enable live plotting
+plot_error = 1; % Enable error plotting
 
-lambda = 0.1;
+% FB-DMD Implementation
+window = 500; % Window length
+step = 100; % Step size for overlapping windows
 
-%% DMD Analysis
-figure;
-for j = initstep:nstep*window:length(f_all) - window
-    f_window = f_all(j:j+window-1, :);
+for start_idx = 1:step:(size(f_all, 1) - window)
+    % Extract data windows
+    Y = f_all(start_idx:start_idx+window-1, :)';
+    Yp = Y(:, 2:end);
+    Ym = Y(:, 1:end-1);
     
     % Forward DMD
-    X1 = f_window(1:end-1, :)';
-    X2 = f_window(2:end, :)';
+    [U_f, S_f, V_f] = svd(Ym, 'econ');
+    f_Atilde = U_f' * Yp * V_f / S_f;
     
-    % Apply SVD
-    [U, S, V] = svd(X1, 'econ');
+    % Backward DMD
+    [U_b, S_b, V_b] = svd(Yp, 'econ');
+    b_Atilde = U_b' * Ym * V_b / S_b;
     
-    % Truncate SVD
-    Ur = U(:, 1:r);
-    Sr = S(1:r, 1:r);
-    Vr = V(:, 1:r);
-    
-    Atilde = Ur' * X2 * Vr / Sr;
-    
+    % Combined FB-DMD
+    Atilde = (f_Atilde / b_Atilde) ^ 0.5;
     [W, D] = eig(Atilde);
-    Phi = X2 * Vr / Sr * W;
+    Phi = Yp * V_f / S_f * W;
+    
+    % DMD Spectra
     lambda = diag(D);
     omega = log(lambda) / dt;
     
-    b = Phi \ X1(:, 1);
+    % Initial condition
+    b = Phi \ Ym(:, 1);
     
-    time_dmd = (0:window-1) * dt; % Match time_dmd to the current window
-    f_dmd = real(Phi * (b .* exp(omega * time_dmd)));
+    % Reconstructed signal
+    time_recon = 0:dt:(window-1)*dt;
+    Y_recon = real(Phi * (b .* exp(omega * time_recon)));
     
-    f_denoised = max(0, abs(f_dmd) - lambda) .* sign(f_dmd);
+    % Live plotting
+    if plot_live
+        for geo = 1:size(Y, 1)
+            subplot(3, 2, geo);
+            plot(time_recon, Y(geo, :), 'b', 'DisplayName', 'Original Signal');
+            hold on;
+            plot(time_recon, Y_recon(geo, :), 'r--', 'DisplayName', 'Reconstructed Signal');
+            title(['Geophone ', num2str(geo)]);
+            xlabel('Time [s]');
+            ylabel('Velocity [m/s]');
+            legend();
+            hold off;
+        end
+        drawnow;
+    end
     
-    %% Visualization
-    
-    subplot(2, 1, 1)
-    plot(time(j:j+window-1), f_window(:, 1), 'DisplayName', 'Original')
-    hold on
-    plot(time(j:j+window-1), f_dmd(1, :), '--', 'DisplayName', 'DMD Reconstruction')
-    legend
-    title('Geophone 1 Signal Reconstruction')
-    
-    subplot(2, 1, 2)
-    plot(time(j:j+window-1), real(f_window(:, 1)) - real(f_denoised(1, :))', 'r', 'DisplayName', 'Error')
-    legend
-    title('Denoising Error')
-
-    drawnow
-    pause(1)
-    clf
+    % Compute and plot error
+    if plot_error
+        NRMSE = sqrt(mean((Y(:) - Y_recon(:)).^2)) / (max(Y(:)) - min(Y(:)));
+        subplot(3, 2, 6);
+        plot(start_idx, NRMSE, 'ko', 'MarkerFaceColor', 'r');
+        hold on;
+        xlabel('Time Window Start');
+        ylabel('NRMSE');
+        title('Error Analysis');
+        drawnow;
+    end
 end
 
 toc
- 
